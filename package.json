@@ -1,0 +1,27 @@
+{
+  "name": "seo",
+  "version": "1.0.0",
+  "description": "Service for monitoring of the index pages in Yandex",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "d3z41k",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/d3z41k/seo-service-index-yandex.git"
+  },
+  "bugs": {
+    "url": "https://github.com/d3z41k/seo-service-index-yandex/issues"
+  },
+  "homepage": "https://github.com/d3z41k/seo-service-index-yandex",
+  "dependencies": {
+    "koa": "^2.3.0",
+    "koa-bodyparser": "^4.2.0",
+    "koa-request": "^1.0.0",
+    "koa-router": "^7.2.1",
+    "koa2-request": "^1.0.1",
+    "xml2json": "^0.11.0"
+  }
+}
