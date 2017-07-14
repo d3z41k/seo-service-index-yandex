@@ -76,32 +76,31 @@ async function indexSite() {
           }
         });
 
-        // for (let p = 0; p < seoProjectsProc.length; p++) {
-        // //for (let p = 0; p < 30; p++) {
-        //
-        //   let response = await request({
-        //       url: `http://${config.server.ip}:3001/${config.yandex.user}/${config.yandex.key}/${seoProjectsProc[p]}`,
-        //       method: 'get',
-        //       headers: {
-        //         'User-Agent': 'request',
-        //         'content-type': 'application/json',
-        //         'charset': 'UTF-8'
-        //       },
-        //   });
-        //   let line = response.body.split(',');
-        //   indexData.push(line);
-        //   await sleep(1500);
-        //
-        //   resolve('indexData');
-        // }
-        //
-        // indexData.forEach((line, l) => {
-        //   line[1] = seoProjects[l][0];
-        // });
-        //
-        // await dbInsert(pool, config.db.table, indexData)
-        //   .then(async (results) => {console.log(results);})
-        //   .catch(console.log);
+        resolve('ok!');
+
+        for (let p = 0; p < seoProjectsProc.length; p++) {
+
+          let response = await request({
+              url: `http://${config.server.ip}:3001/${config.yandex.user}/${config.yandex.key}/${seoProjectsProc[p]}`,
+              method: 'get',
+              headers: {
+                'User-Agent': 'request',
+                'content-type': 'application/json',
+                'charset': 'UTF-8'
+              },
+          });
+          let line = response.body.split(',');
+          indexData.push(line);
+          await sleep(1500);
+        }
+
+        indexData.forEach((line, l) => {
+          line[1] = seoProjects[l][0];
+        });
+
+        await dbInsert(pool, config.db.table, indexData)
+          .then(async (results) => {console.log(results);})
+          .catch(console.log);
 
         range = list.index + config.range.date;
         let dateRaw = await crud.read(config.sid.index, range);
@@ -116,15 +115,31 @@ async function indexSite() {
 
         let params = [date, seoProjects];
 
-        let result = await indexQuery(pool, config.db.table, params);
+        let resultRaw = await indexQuery(pool, config.db.table, params);
 
-        console.log(result);
+        let result = [];
 
+        for (let p = 0; p < seoProjects.length; p++) {
+          result.push([]);
+          for (let d = 0; d < resultRaw.length; d++) {
+            if (resultRaw[d][p]) {
+              result[p].push(resultRaw[d][p][0]);
+            } else {
+              result[p].push(0);
+            }
+            result[p].push(null);
+          }
+        }
+
+        range = list.index + config.range.data;
+
+        await crud.update(result, config.sid.index, range)
+          .then(async results => {console.log(results);})
+          .catch(console.log);
 
       } catch (e) {
         reject(e.stack);
       }
-
 
     } // = End start function =
 
