@@ -19,7 +19,9 @@ async function indexQuery(pool, tableName, params) {
               for (let key in col[0]) {
                 result[d].push([col[0][key] ? col[0][key] : 0]);
               }
-
+              if (!col.length) {
+                result[d].push([0]);
+              }
             })
             .catch(err => {
               console.log(err)

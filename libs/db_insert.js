@@ -2,7 +2,7 @@
 
 const config = require('config');
 
-async function dbRefresh(pool, tableName, data) {
+async function dbInsert(pool, tableName, data) {
   return new Promise(async (resolve, reject) => {
     for (let i = 0; i < data.length; i++) {
       await pool.query("INSERT INTO " + tableName + " VALUES (NULL, '" + data[i].join('\', \'') + "')")
@@ -12,4 +12,4 @@ async function dbRefresh(pool, tableName, data) {
   });
 }
 
-module.exports = dbRefresh;
+module.exports = dbInsert;
