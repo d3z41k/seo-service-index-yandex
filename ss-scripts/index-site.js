@@ -5,7 +5,7 @@ const punycode = require('punycode');
 const request = require('koa2-request');
 const _ = require('lodash/array');
 
-async function indexSite() {
+async function indexSite(flag) {
   return new Promise(async(resolve, reject) => {
 
     //-------------------------------------------------------------------------
@@ -27,6 +27,7 @@ async function indexSite() {
     async function start(auth) {
 
       const crud = new Crud(auth);
+      const regexp = /[а-яё]/i; //rus abc
 
       let list = {
         'index': encodeURIComponent('Index2'),
@@ -37,8 +38,11 @@ async function indexSite() {
       let seoProjects = [];
       let clearProjects = [];
       let indexData = [];
+      let result = [];
 
-      //= The seo projects update =
+      //---------------------------------------------------------------
+      // The seo projects update
+      //---------------------------------------------------------------
 
       try {
 
@@ -62,45 +66,58 @@ async function indexSite() {
           .then(async results => {console.log(results);})
           .catch(console.log);
 
-        //= The seo projects update =
 
-        let regexp = /[а-яё]/i;
+        resolve('ok!'); //for avoid timeout
 
-        let seoProjectsProc = seoProjects.map(project => {
-          return project[0].replace(/http:\/\//g, '');
-        });
+        if(!flag) {
 
-        seoProjectsProc.forEach((project, p) => {
-          if (regexp.test(project)) {
-            seoProjectsProc[p] = punycode.toASCII(project);
-          }
-        });
+          //---------------------------------------------------------------
+          // Request index data to proxy (yandex xml) and insert to DB
+          //---------------------------------------------------------------
 
-        resolve('ok!');
+          //= Processing the seo ptoject =
 
-        for (let p = 0; p < seoProjectsProc.length; p++) {
-
-          let response = await request({
-              url: `http://${config.server.ip}:3001/${config.yandex.user}/${config.yandex.key}/${seoProjectsProc[p]}`,
-              method: 'get',
-              headers: {
-                'User-Agent': 'request',
-                'content-type': 'application/json',
-                'charset': 'UTF-8'
-              },
+          let seoProjectsProc = seoProjects.map(project => {
+            return project[0].replace(/http:\/\//g, '');
           });
-          let line = response.body.split(',');
-          indexData.push(line);
-          await sleep(1500);
+
+          seoProjectsProc.forEach((project, p) => {
+            if (regexp.test(project)) {
+              seoProjectsProc[p] = punycode.toASCII(project);
+            }
+          });
+
+          for (let p = 0; p < seoProjectsProc.length; p++) {
+
+            let response = await request({
+                url: `http://${config.server.ip}:3001/${config.yandex.user}/${config.yandex.key}/${seoProjectsProc[p]}`,
+                method: 'get',
+                headers: {
+                  'User-Agent': 'request',
+                  'content-type': 'application/json',
+                  'charset': 'UTF-8'
+                },
+            });
+            let line = response.body.split(',');
+            indexData.push(line);
+            await sleep(1500);
+            
+          }
+
+          //= Insert response data to DB =
+
+          indexData.forEach((line, l) => {
+            line[1] = seoProjects[l][0];
+          });
+
+          await dbInsert(pool, config.db.table, indexData)
+            .then(async (results) => {console.log(results);})
+            .catch(console.log);
         }
 
-        indexData.forEach((line, l) => {
-          line[1] = seoProjects[l][0];
-        });
-
-        await dbInsert(pool, config.db.table, indexData)
-          .then(async (results) => {console.log(results);})
-          .catch(console.log);
+        //---------------------------------------------------------------
+        // Query to DB and insert the data in a destination table
+        //---------------------------------------------------------------
 
         range = list.index + config.range.date;
         let dateRaw = await crud.read(config.sid.index, range);
@@ -114,10 +131,7 @@ async function indexSite() {
         });
 
         let params = [date, seoProjects];
-
         let resultRaw = await indexQuery(pool, config.db.table, params);
-
-        let result = [];
 
         for (let p = 0; p < seoProjects.length; p++) {
           result.push([]);
