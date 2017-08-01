@@ -6,7 +6,7 @@ const request = require('koa2-request');
 const _ = require('lodash/array');
 
 async function indexSite(flag) {
-  return new Promise(async(resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
 
     //-------------------------------------------------------------------------
     // Usres libs
@@ -30,7 +30,7 @@ async function indexSite(flag) {
       const regexp = /[а-яё]/i; //rus abc
 
       let list = {
-        'index': encodeURIComponent('Index2'),
+        'index': encodeURIComponent('index'),
         'seo': encodeURIComponent('SEO (реестр)')
       };
 
@@ -101,7 +101,7 @@ async function indexSite(flag) {
             let line = response.body.split(',');
             indexData.push(line);
             await sleep(1500);
-            
+
           }
 
           //= Insert response data to DB =

@@ -31,7 +31,25 @@ router
     let jsonBody = parser.toJson(response.body);
     jsonBody = JSON.parse(jsonBody);
 
-    if (!jsonBody.yandexsearch.response.error) {
+    if (!jsonBody.yandexsearch.response.error && jsonBody.yandexsearch.response.found[2].$t) {
+
+      let found = jsonBody.yandexsearch.response.found[2].$t;
+      ctx.body = [now, params.query, found, 'ok'].join();
+
+    } else if (!jsonBody.yandexsearch.response.error && !jsonBody.yandexsearch.response.found[2].$t) {
+
+      let response = await request({
+          url: `https://yandex.ru/search/xml?user=${params.user}&key=${params.key}&query=site:${params.query}`,
+          method: 'get',
+          headers: {
+            'User-Agent': 'request',
+            'content-type': 'application/xml',
+            'charset': 'UTF-8'
+          },
+      });
+
+      let jsonBody = parser.toJson(response.body);
+      jsonBody = JSON.parse(jsonBody);
 
       let found = jsonBody.yandexsearch.response.found[2].$t;
       ctx.body = [now, params.query, found, 'ok'].join();
@@ -61,6 +79,52 @@ router
       }
     }
 
+  }).get('/position/:user/:key/:query/:region/:site/', async (ctx, next) => {
+    let params = ctx.params;
+
+    let now = new Date();
+    now = formatDate(now);
+    now = now.split(',')[0];
+
+    let response = await request({
+        url: 'https://yandex.ru/search/xml?' +
+          'user=' + params.user +
+          '&key=' + params.key +
+          '&query=' + encodeURIComponent(params.query) +
+          '&lr=' + params.region +
+          '&l10n=ru' +
+          '&sortby=rlv' +
+          '&filter=none' +
+          '&groupby=attr=\"\".mode=flat.groups-on-page=50.docs-in-group=1',
+
+        method: 'get',
+        headers: {
+          'User-Agent': 'request',
+          'content-type': 'application/xml',
+          'charset': 'UTF-8'
+        },
+    });
+
+    let resultSite = [];
+    let position = 0;
+
+    let jsonBody = parser.toJson(response.body);
+    jsonBody = JSON.parse(jsonBody);
+
+    let resultGroup = jsonBody.yandexsearch.response.results.grouping.group;
+
+    resultGroup.forEach(result => {
+      resultSite.push(result.doc.domain);
+    });
+
+    for (let i = 0; i < resultSite.length; i++) {
+      if (resultSite[i] == params.site) {
+        position = i + 1;
+        break;
+      }
+    }
+
+    ctx.body = position;
 });
 
 
