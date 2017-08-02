@@ -4,6 +4,10 @@ const config = require('config');
 const punycode = require('punycode');
 const request = require('koa2-request');
 const _ = require('lodash/array');
+const {promisify} = require('util');
+
+const fs = require('fs');
+const readFileAsync = promisify(fs.readFile);
 
 async function positionSite(flag) {
   return new Promise(async (resolve, reject) => {
@@ -39,11 +43,18 @@ async function positionSite(flag) {
 
       let site = '';
       let region = '';
+      let regions = [];
       let keys = [];
 
       //---------------------------------------------------------------
       // The seo projects update
       //---------------------------------------------------------------
+
+      await readFileAsync('./libs/regions.json', {encoding: 'utf8'})
+        .then(data => {
+          regions = JSON.parse(data);
+        })
+        .catch(console.log);
 
       try {
 
@@ -51,7 +62,7 @@ async function positionSite(flag) {
         let positionParamRaw = await crud.read(config.sid.position, range);
 
         site = positionParamRaw[0][1];
-        region = positionParamRaw[0][0];
+        region = regions[positionParamRaw[0][0]];
 
         positionParamRaw.forEach((params, p)=> {
           if (p) {
@@ -69,6 +80,7 @@ async function positionSite(flag) {
 
         site = site.replace(/http:\/\//g, '');
         site = site.replace(/www./g, '');
+        site = site.trim();
         site = punycode.toASCII(site);
 
         keys = keys.map(key => {
@@ -93,13 +105,25 @@ async function positionSite(flag) {
           });
 
           let position = response.body.split(',');
-          console.log(position);
           positionData.push(position);
           await sleep(1500);
 
         }
 
-        range = list.position + '!F3:F';
+        let top10 = 0;
+        let topKeys = 0;
+
+        positionData.forEach(position => {
+          if(position[0] != '-' && position[0] < 11) {
+            topKeys++;
+          }
+        });
+
+        top10 = topKeys / (positionData.length - 1) * 100;
+        top10 = Math.round(top10 * 10) / 10;
+        positionData.unshift([top10]);
+
+        range = list.position + '!F2:F';
         await crud.update(positionData, config.sid.position, range)
           .then(async results => {console.log(results);})
           .catch(console.log);

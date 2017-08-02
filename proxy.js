@@ -106,7 +106,7 @@ router
     });
 
     let resultSite = [];
-    let position = 0;
+    let position = '-';
 
     let jsonBody = parser.toJson(response.body);
     jsonBody = JSON.parse(jsonBody);
