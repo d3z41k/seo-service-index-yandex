@@ -65,7 +65,7 @@ async function positionSite(flag) {
         region = regions[positionParamRaw[0][0]];
 
         positionParamRaw.forEach((params, p)=> {
-          if (p) {
+          if (p > 1) {
             keys.push(params[3]);
           }
         });
@@ -104,8 +104,7 @@ async function positionSite(flag) {
               },
           });
 
-          let position = response.body.split(',');
-          positionData.push(position);
+          positionData.push(response.body.split(','));
           await sleep(1500);
 
         }
@@ -113,17 +112,24 @@ async function positionSite(flag) {
         let top10 = 0;
         let topKeys = 0;
 
-        positionData.forEach(position => {
-          if(position[0] != '-' && position[0] < 11) {
+        positionData.forEach(data => {
+          if(data[1] != '-' && data[1] < 11) {
             topKeys++;
+          }
+          if (data[0]) {
+            data[0] = data[0].replace(/http:\/\//g, '');
+            data[0] = data[0].replace(/www./g, '');
+            data[0] = data[0].replace(site, '');
           }
         });
 
         top10 = topKeys / (positionData.length - 1) * 100;
         top10 = Math.round(top10 * 10) / 10;
-        positionData.unshift([top10]);
+        positionData.unshift([null, top10]);
 
-        range = list.position + '!F2:F';
+        //console.log(positionData);
+
+        range = list.position + '!F3:G';
         await crud.update(positionData, config.sid.position, range)
           .then(async results => {console.log(results);})
           .catch(console.log);

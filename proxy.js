@@ -107,6 +107,7 @@ router
 
     let resultSite = [];
     let position = '-';
+    let url = '-';
 
     let jsonBody = parser.toJson(response.body);
     jsonBody = JSON.parse(jsonBody);
@@ -114,17 +115,18 @@ router
     let resultGroup = jsonBody.yandexsearch.response.results.grouping.group;
 
     resultGroup.forEach(result => {
-      resultSite.push(result.doc.domain);
+      resultSite.push(result.doc);
     });
 
     for (let i = 0; i < resultSite.length; i++) {
-      if (resultSite[i] == params.site) {
+      if (resultSite[i]['domain'] == params.site) {
         position = i + 1;
+        url = resultSite[i]['url'];
         break;
       }
     }
 
-    ctx.body = position;
+    ctx.body = url + ',' + position;
 });
 
 
