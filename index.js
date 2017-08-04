@@ -15,9 +15,9 @@ router
     const indexSite = require('./ss-scripts/index-site');
     ctx.body = await indexSite(true);
   })
-  .get('/position-site/', async ctx => {
-    const positionSite = require('./ss-scripts/position-site');
-    ctx.body = await positionSite(true);
+  .get('/position-single/', async ctx => {
+    const positionSingle = require('./ss-scripts/position-single');
+    ctx.body = await positionSingle(true);
 });
 
 const server = app.listen({port: 3002}, () => {

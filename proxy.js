@@ -31,12 +31,7 @@ router
     let jsonBody = parser.toJson(response.body);
     jsonBody = JSON.parse(jsonBody);
 
-    if (!jsonBody.yandexsearch.response.error && jsonBody.yandexsearch.response.found[2].$t) {
-
-      let found = jsonBody.yandexsearch.response.found[2].$t;
-      ctx.body = [now, params.query, found, 'ok'].join();
-
-    } else if (!jsonBody.yandexsearch.response.error && !jsonBody.yandexsearch.response.found[2].$t) {
+    if (jsonBody.yandexsearch.response.error) {
 
       let response = await request({
           url: `https://yandex.ru/search/xml?user=${params.user}&key=${params.key}&query=site:${params.query}`,
@@ -48,13 +43,12 @@ router
           },
       });
 
-      let jsonBody = parser.toJson(response.body);
+      jsonBody = parser.toJson(response.body);
       jsonBody = JSON.parse(jsonBody);
 
-      let found = jsonBody.yandexsearch.response.found[2].$t;
-      ctx.body = [now, params.query, found, 'ok'].join();
+    }
 
-    } else {
+    if (jsonBody.yandexsearch.response.error) {
 
       let response = await request({
           url: `https://yandex.ru/search/xml?user=${params.user}&key=${params.key}&query=host:www.${params.query}`,
@@ -66,17 +60,17 @@ router
           },
       });
 
-      let jsonBody = parser.toJson(response.body);
+      jsonBody = parser.toJson(response.body);
       jsonBody = JSON.parse(jsonBody);
+    }
 
-      if (!jsonBody.yandexsearch.response.error) {
+    if (!jsonBody.yandexsearch.response.error) {
 
-        let found = jsonBody.yandexsearch.response.found[2].$t;
-        ctx.body = [now, params.query, found, 'ok'].join();
+      let found = jsonBody.yandexsearch.response.found[2].$t;
+      ctx.body = [now, params.query, found, 'ok'].join();
 
-      } else {
-        ctx.body = [now, params.query, 'error', jsonBody.yandexsearch.response.error.$t].join();
-      }
+    } else {
+      ctx.body = [now, params.query, 'error', jsonBody.yandexsearch.response.error.$t].join();
     }
 
   }).get('/position/:user/:key/:query/:region/:site/', async (ctx, next) => {

@@ -110,7 +110,7 @@ async function indexSite(flag) {
             line[1] = seoProjects[l][0];
           });
 
-          await dbInsert(pool, config.db.table, indexData)
+          await dbInsert(pool, config.table.index, indexData)
             .then(async (results) => {console.log(results);})
             .catch(console.log);
         }
@@ -131,7 +131,7 @@ async function indexSite(flag) {
         });
 
         let params = [date, seoProjects];
-        let resultRaw = await indexQuery(pool, config.db.table, params);
+        let resultRaw = await indexQuery(pool, config.table.index, params);
 
         for (let p = 0; p < seoProjects.length; p++) {
           result.push([]);
