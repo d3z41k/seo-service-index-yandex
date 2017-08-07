@@ -22,7 +22,7 @@ async function positionSite(flag) {
     const sleep = require('../libs/sleep');
     const pool = require('../libs/db_pool');
     const dbInsert = require('../libs/db_insert');
-    const indexQuery = require('../libs/db_index-query');
+    const positionQuery = require('../libs/db_position-query');
 
     //---------------------------------------------------------------
     // Main function
@@ -33,7 +33,7 @@ async function positionSite(flag) {
       const crud = new Crud(auth);
 
       let list = {
-        'position': encodeURIComponent('position'),
+        'position': encodeURIComponent('Эвакуатор'),
       };
 
       let range = '';
@@ -49,13 +49,13 @@ async function positionSite(flag) {
       // The seo projects update
       //---------------------------------------------------------------
 
-      await readFileAsync('./libs/regions.json', {encoding: 'utf8'})
-        .then(data => {
-          regions = JSON.parse(data);
-        })
-        .catch(console.log);
-
       try {
+
+        await readFileAsync('./libs/regions.json', {encoding: 'utf8'})
+          .then(data => {
+            regions = JSON.parse(data);
+          })
+          .catch(console.log);
 
         range = list.position + config.range.position;
         let positionParamRaw = await crud.read(config.sid.position, range);
@@ -69,69 +69,92 @@ async function positionSite(flag) {
           }
         });
 
-        resolve('ok!'); //for avoid timeout
-
-        //---------------------------------------------------------------
-        //
-        //---------------------------------------------------------------
-
-        //= Processing the seo ptoject =
-
         site = site.replace(/http:\/\//g, '');
         site = site.replace(/www./g, '');
         site = site.trim();
         site = punycode.toASCII(site);
 
-        keys = keys.map(key => {
-          return encodeURIComponent(key);
-        });
+        resolve('ok!'); //for avoid timeout
 
-        for (let i = 0; i < keys.length; i++) {
+        if (!flag) { // make request and write in DB
 
-          let response = await request({
-              url: 'http://' + config.server.ip + ':3001/position/'
-              + config.yandex.user + '/'
-              + config.yandex.key + '/'
-              + keys[i] + '/'
-              + region + '/'
-              + site,
-              method: 'get',
-              headers: {
-                'User-Agent': 'request',
-                'content-type': 'application/json',
-                'charset': 'UTF-8'
-              },
+            //= Processing the seo ptoject =
+            keys = keys.map(key => {
+              return encodeURIComponent(key);
+            });
+
+            for (let i = 0; i < keys.length; i++) {
+
+              let response = await request({
+                  url: 'http://' + config.server.ip + ':3001/position/'
+                  + config.yandex.user + '/'
+                  + config.yandex.key + '/'
+                  + keys[i] + '/'
+                  + region + '/'
+                  + site,
+                  method: 'get',
+                  headers: {
+                    'User-Agent': 'request',
+                    'content-type': 'application/json',
+                    'charset': 'UTF-8'
+                  },
+              });
+
+              positionData.push(response.body.split(','));
+              await sleep(1500);
+
+            }
+
+            positionData.forEach(data => {
+              if (data[3]) {
+                data[3] = data[3].replace(/http:\/\//g, '');
+                data[3] = data[3].replace(/www./g, '');
+                data[3] = data[3].replace(site, '');
+              }
+            });
+
+            // console.log(positionData);
+
+            await dbInsert(pool, config.table.position, positionData)
+              .then(async (results) => {console.log(results);})
+              .catch(console.log);
+
+
+        } // end request and write in DB
+
+        if (flag) {
+
+          range = list.position + config.range.date;
+          let dateSample = await crud.read(config.sid.position, range);
+
+          let params = [dateSample[0], [site], keys];
+
+          //console.log(params);
+
+          let positionData = await positionQuery(pool, config.table.position, params);
+
+          console.log(require('util').inspect(positionData[0][0], { depth: null }));
+
+          let top10 = 0;
+          let topKeys = 0;
+
+          positionData[0][0].forEach(data => {
+            if(data[1] != '-' && Number(data[1]) < 11) {
+              topKeys++;
+            }
           });
 
-          positionData.push(response.body.split(','));
-          await sleep(1500);
+          top10 = topKeys / (positionData[0][0].length - 1) * 100;
+          top10 = Math.round(top10 * 10) / 10;
+          let data = positionData[0][0];
+          data.unshift([null, top10]);
 
+
+          range = list.position + '!F3:G';
+          await crud.update(data, config.sid.position, range)
+            .then(async results => {console.log(results);})
+            .catch(console.log);
         }
-
-        let top10 = 0;
-        let topKeys = 0;
-
-        positionData.forEach(data => {
-          if(data[1] != '-' && Number(data[1]) < 11) {
-            topKeys++;
-          }
-          if (data[0]) {
-            data[0] = data[0].replace(/http:\/\//g, '');
-            data[0] = data[0].replace(/www./g, '');
-            data[0] = data[0].replace(site, '');
-          }
-        });
-
-        top10 = topKeys / (positionData.length - 1) * 100;
-        top10 = Math.round(top10 * 10) / 10;
-        positionData.unshift([null, top10]);
-
-        //console.log(positionData);
-
-        range = list.position + '!F3:G';
-        await crud.update(positionData, config.sid.position, range)
-          .then(async results => {console.log(results);})
-          .catch(console.log);
 
       } catch (e) {
         reject(e.stack);

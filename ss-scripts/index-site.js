@@ -100,7 +100,7 @@ async function indexSite(flag) {
             });
             let line = response.body.split(',');
             indexData.push(line);
-            await sleep(1500);
+            await sleep(2000);
 
           }
 

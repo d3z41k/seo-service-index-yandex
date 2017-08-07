@@ -76,10 +76,6 @@ router
   }).get('/position/:user/:key/:query/:region/:site/', async (ctx, next) => {
     let params = ctx.params;
 
-    let now = new Date();
-    now = formatDate(now);
-    now = now.split(',')[0];
-
     let response = await request({
         url: 'https://yandex.ru/search/xml?' +
           'user=' + params.user +
@@ -120,7 +116,11 @@ router
       }
     }
 
-    ctx.body = url + ',' + position;
+    let now = new Date();
+    now = formatDate(now);
+    now = now.split(',')[0];
+
+    ctx.body = now + ',' + params.site + ',' + params.query + ',' + url + ',' + position;
 });
 
 

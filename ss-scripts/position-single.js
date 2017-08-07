@@ -9,7 +9,7 @@ const {promisify} = require('util');
 const fs = require('fs');
 const readFileAsync = promisify(fs.readFile);
 
-async function positionSingle(flag) {
+async function positionSingle() {
   return new Promise(async (resolve, reject) => {
 
     //-------------------------------------------------------------------------
@@ -20,9 +20,6 @@ async function positionSingle(flag) {
     const Crud = require('../controllers/crud');
     const formatDate = require('../libs/format-date');
     const sleep = require('../libs/sleep');
-    const pool = require('../libs/db_pool');
-    const dbInsert = require('../libs/db_insert');
-    const indexQuery = require('../libs/db_index-query');
 
     //---------------------------------------------------------------
     // Main function

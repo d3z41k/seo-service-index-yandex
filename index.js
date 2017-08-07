@@ -14,10 +14,17 @@ router
   .get('/index-site/update', async ctx => {
     const indexSite = require('./ss-scripts/index-site');
     ctx.body = await indexSite(true);
-  })
-  .get('/position-single/', async ctx => {
+  }).get('/position-single/', async ctx => {
     const positionSingle = require('./ss-scripts/position-single');
-    ctx.body = await positionSingle(true);
+    ctx.body = await positionSingle();
+  })
+  .get('/position-monitoring/', async ctx => {
+    const positionMonitoring = require('./ss-scripts/position-monitoring');
+    ctx.body = await positionMonitoring(false);
+  })
+  .get('/position-monitoring/update', async ctx => {
+    const positionMonitoring = require('./ss-scripts/position-monitoring');
+    ctx.body = await positionMonitoring(true);
 });
 
 const server = app.listen({port: 3002}, () => {
