@@ -96,7 +96,7 @@ router
     });
 
     let resultSite = [];
-    let position = '-';
+    let position = 0;
     let url = '-';
 
     let jsonBody = parser.toJson(response.body);

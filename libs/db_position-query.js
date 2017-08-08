@@ -21,10 +21,7 @@ async function positionQuery(pool, tableName, params) {
                   params[2][k]
                 ])
               .then(([col, feilds]) => {
-                result[d][s].push(col[0] ? [col[0]['url'], col[0]['position']] : [0]);
-                if (!col.length) {
-                  result[d][s].push([0]);
-                }
+                result[d][s].push(col[0] ? [col[0]['url'], col[0]['position']] : [0, 0]);
               })
               .catch(err => {
                 console.log(err)

@@ -46,7 +46,7 @@ async function indexSite(flag) {
 
       try {
 
-        range = list.seo + config.range.seo;
+        range = list.seo + config.range.params.seo;
         let seoProjectsRaw = await crud.read(config.sid.seo, range);
 
         seoProjectsRaw.forEach(project => {
@@ -56,7 +56,7 @@ async function indexSite(flag) {
           clearProjects.push(['']);
         });
 
-        range = list.index + config.range.index;
+        range = list.index + config.range.params.index;
 
         await crud.update(clearProjects, config.sid.index, range)
           .then(async results => {console.log(results);})
@@ -119,7 +119,7 @@ async function indexSite(flag) {
         // Query to DB and insert the data in a destination table
         //---------------------------------------------------------------
 
-        range = list.index + config.range.date;
+        range = list.index + config.range.date.index;
         let dateRaw = await crud.read(config.sid.index, range);
 
         let date = _.remove(dateRaw[0], n => {
@@ -131,6 +131,7 @@ async function indexSite(flag) {
         });
 
         let params = [date, seoProjects];
+
         let resultRaw = await indexQuery(pool, config.table.index, params);
 
         for (let p = 0; p < seoProjects.length; p++) {
@@ -145,7 +146,9 @@ async function indexSite(flag) {
           }
         }
 
-        range = list.index + config.range.data;
+        range = list.index + config.range.result.index;
+
+        //console.log(result);
 
         await crud.update(result, config.sid.index, range)
           .then(async results => {console.log(results);})

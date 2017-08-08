@@ -1,3 +1,6 @@
+
+
+
 'use strict';
 
 const config = require('config');
@@ -54,7 +57,7 @@ async function positionSingle() {
 
       try {
 
-        range = list.position + config.range.position;
+        range = list.position + config.range.params.position;
         let positionParamRaw = await crud.read(config.sid.position, range);
 
         site = positionParamRaw[0][1];
@@ -100,7 +103,7 @@ async function positionSingle() {
               },
           });
 
-          positionData.push(response.body.split(','));
+          positionData.push(response.body.split(',').splice(3, 2));
           await sleep(1500);
 
         }
@@ -109,7 +112,8 @@ async function positionSingle() {
         let topKeys = 0;
 
         positionData.forEach(data => {
-          if(data[1] != '-' && data[1] < 11) {
+          if(data[1] && Number(data[1]) < 11) {
+            console.log(data[1]);
             topKeys++;
           }
           if (data[0]) {
@@ -119,13 +123,11 @@ async function positionSingle() {
           }
         });
 
-        top10 = topKeys / (positionData.length - 1) * 100;
-        top10 = Math.round(top10 * 10) / 10;
+        top10 = topKeys / positionData.length * 100;
+        top10 = Math.round(top10 * 100) / 100;
         positionData.unshift([null, top10]);
 
-        //console.log(positionData);
-
-        range = list.position + '!F3:G';
+        range = list.position + config.range.result.positionSingle;
         await crud.update(positionData, config.sid.position, range)
           .then(async results => {console.log(results);})
           .catch(console.log);

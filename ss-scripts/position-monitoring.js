@@ -57,7 +57,7 @@ async function positionSite(flag) {
           })
           .catch(console.log);
 
-        range = list.position + config.range.position;
+        range = list.position + config.range.params.position;
         let positionParamRaw = await crud.read(config.sid.position, range);
 
         site = positionParamRaw[0][1];
@@ -122,39 +122,57 @@ async function positionSite(flag) {
 
         } // end request and write in DB
 
-        if (flag) {
+        range = list.position + config.range.date.position;
+        let dateSample = await crud.read(config.sid.position, range);
 
-          range = list.position + config.range.date;
-          let dateSample = await crud.read(config.sid.position, range);
+        let params = [dateSample[0], [site], keys];
 
-          let params = [dateSample[0], [site], keys];
+        let positionData = await positionQuery(pool, config.table.position, params);
+        let positionDataCommon = [];
 
-          //console.log(params);
+        //console.log(require('util').inspect(positionData, { depth: null }));
 
-          let positionData = await positionQuery(pool, config.table.position, params);
+        positionData.forEach(dataDay => {
 
-          console.log(require('util').inspect(positionData[0][0], { depth: null }));
+          dataDay.forEach(dataSite => {
+            let tempData = [];
 
-          let top10 = 0;
-          let topKeys = 0;
+            let top10 = 0;
+            let topKeys = 0;
 
-          positionData[0][0].forEach(data => {
-            if(data[1] != '-' && Number(data[1]) < 11) {
-              topKeys++;
+            dataSite.forEach(data => {
+              if(data[1] && Number(data[1]) < 11) {
+                topKeys++;
+              }
+            });
+
+            top10 = topKeys / dataSite.length * 100;
+            top10 = Math.round(top10 * 100) / 100;
+
+            tempData.push([top10]);
+
+            dataSite.forEach(data =>  {
+              tempData.push([data.pop()]);
+            });
+
+            if (!positionDataCommon.length) {
+              positionDataCommon = tempData;
+            } else {
+
+              for (var i = 0; i < tempData.length; i++) {
+                positionDataCommon[i].push(tempData[i][0]);
+              }
             }
+
           });
 
-          top10 = topKeys / (positionData[0][0].length - 1) * 100;
-          top10 = Math.round(top10 * 10) / 10;
-          let data = positionData[0][0];
-          data.unshift([null, top10]);
+        });
 
+        range = list.position + config.range.result.positionMoninoring;
 
-          range = list.position + '!F3:G';
-          await crud.update(data, config.sid.position, range)
-            .then(async results => {console.log(results);})
-            .catch(console.log);
-        }
+        await crud.update(positionDataCommon, config.sid.position, range)
+          .then(async results => {console.log(results);})
+          .catch(console.log);
 
       } catch (e) {
         reject(e.stack);
