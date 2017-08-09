@@ -39,11 +39,8 @@ async function positionSite(flag) {
       let range = '';
       let positionData = [];
       let result = [];
-
-      let site = '';
-      let region = '';
       let regions = [];
-      let keys = [];
+
 
       //---------------------------------------------------------------
       // The seo projects update
@@ -60,119 +57,133 @@ async function positionSite(flag) {
         range = list.position + config.range.params.position;
         let positionParamRaw = await crud.read(config.sid.position, range);
 
-        site = positionParamRaw[0][1];
-        region = regions[positionParamRaw[0][0]];
+        //console.log(positionParamRaw);
 
-        positionParamRaw.forEach((params, p)=> {
-          if (p > 1) {
-            keys.push(params[3]);
+        let positionParam = {};
+        let currentProject = '';
+
+        positionParamRaw.forEach(line => {
+
+          if (line.length == 2 && line[0] && line[1]) {
+
+            let site = line[1].replace(/http:\/\//g, '');
+            site = site.replace(/www./g, '');
+            site = site.trim();
+            site = punycode.toASCII(site);
+
+            positionParam[site] = {
+              'region': regions[line[0]],
+              'keywords': []
+            };
+            currentProject = site;
           }
+
+          if (line.length == 4 && line[3] && currentProject) {
+            //positionParam[currentProject].keywords.push(encodeURIComponent(line[3]));
+            positionParam[currentProject].keywords.push(line[3]);
+
+          }
+
         });
 
-        site = site.replace(/http:\/\//g, '');
-        site = site.replace(/www./g, '');
-        site = site.trim();
-        site = punycode.toASCII(site);
+        console.log(positionParam);
+
+
 
         resolve('ok!'); //for avoid timeout
 
         if (!flag) { // make request and write in DB
+            //
+            // for (let i = 0; i < keys.length; i++) {
+            //
+            //   let response = await request({
+            //       url: 'http://' + config.server.ip + ':3001/position/'
+            //       + config.yandex.user + '/'
+            //       + config.yandex.key + '/'
+            //       + keys[i] + '/'
+            //       + region + '/'
+            //       + site,
+            //       method: 'get',
+            //       headers: {
+            //         'User-Agent': 'request',
+            //         'content-type': 'application/json',
+            //         'charset': 'UTF-8'
+            //       },
+            //   });
+            //
+            //   positionData.push(response.body.split(','));
+            //   await sleep(1500);
+            //
+            // }
+            //
+            // positionData.forEach(data => {
+            //   if (data[3]) {
+            //     data[3] = data[3].replace(/http:\/\//g, '');
+            //     data[3] = data[3].replace(/www./g, '');
+            //     data[3] = data[3].replace(site, '');
+            //   }
+            // });
 
-            //= Processing the seo ptoject =
-            keys = keys.map(key => {
-              return encodeURIComponent(key);
-            });
+            //console.log(positionData);
 
-            for (let i = 0; i < keys.length; i++) {
-
-              let response = await request({
-                  url: 'http://' + config.server.ip + ':3001/position/'
-                  + config.yandex.user + '/'
-                  + config.yandex.key + '/'
-                  + keys[i] + '/'
-                  + region + '/'
-                  + site,
-                  method: 'get',
-                  headers: {
-                    'User-Agent': 'request',
-                    'content-type': 'application/json',
-                    'charset': 'UTF-8'
-                  },
-              });
-
-              positionData.push(response.body.split(','));
-              await sleep(1500);
-
-            }
-
-            positionData.forEach(data => {
-              if (data[3]) {
-                data[3] = data[3].replace(/http:\/\//g, '');
-                data[3] = data[3].replace(/www./g, '');
-                data[3] = data[3].replace(site, '');
-              }
-            });
-
-            // console.log(positionData);
-
-            await dbInsert(pool, config.table.position, positionData)
-              .then(async (results) => {console.log(results);})
-              .catch(console.log);
+            // await dbInsert(pool, config.table.position, positionData)
+            //   .then(async (results) => {console.log(results);})
+            //   .catch(console.log);
 
 
         } // end request and write in DB
 
-        range = list.position + config.range.date.position;
-        let dateSample = await crud.read(config.sid.position, range);
+        if (flag) {
 
-        let params = [dateSample[0], [site], keys];
+          range = list.position + config.range.date.position;
+          let dateSample = await crud.read(config.sid.position, range);
 
-        let positionData = await positionQuery(pool, config.table.position, params);
-        let positionDataCommon = [];
+          let params = [dateSample[0], [site], keys];
 
-        //console.log(require('util').inspect(positionData, { depth: null }));
+          let positionData = await positionQuery(pool, config.table.position, params);
+          let positionDataCommon = [];
 
-        positionData.forEach(dataDay => {
+          //console.log(require('util').inspect(positionData, { depth: null }));
 
-          dataDay.forEach(dataSite => {
-            let tempData = [];
+          positionData.forEach(dataDay => {
+            dataDay.forEach(dataSite => {
 
-            let top10 = 0;
-            let topKeys = 0;
+              let tempData = [];
+              let top10 = 0;
+              let topKeys = 0;
 
-            dataSite.forEach(data => {
-              if(data[1] && Number(data[1]) < 11) {
-                topKeys++;
+              dataSite.forEach(data => {
+                if(data[1] && Number(data[1]) < 11) {
+                  topKeys++;
+                }
+              });
+
+              top10 = topKeys / dataSite.length * 100;
+              top10 = Math.round(top10 * 100) / 100;
+              tempData.push([top10]);
+
+              dataSite.forEach(data =>  {
+                tempData.push([data.pop()]);
+              });
+
+              if (!positionDataCommon.length) {
+                positionDataCommon = tempData;
+              } else {
+                for (var i = 0; i < tempData.length; i++) {
+                  positionDataCommon[i].push(tempData[i][0]);
+                }
               }
+
             });
-
-            top10 = topKeys / dataSite.length * 100;
-            top10 = Math.round(top10 * 100) / 100;
-
-            tempData.push([top10]);
-
-            dataSite.forEach(data =>  {
-              tempData.push([data.pop()]);
-            });
-
-            if (!positionDataCommon.length) {
-              positionDataCommon = tempData;
-            } else {
-
-              for (var i = 0; i < tempData.length; i++) {
-                positionDataCommon[i].push(tempData[i][0]);
-              }
-            }
-
           });
 
-        });
+          range = list.position + config.range.result.positionMoninoring;
 
-        range = list.position + config.range.result.positionMoninoring;
+          await crud.update(positionDataCommon, config.sid.position, range)
+            .then(async results => {console.log(results);})
+            .catch(console.log);
 
-        await crud.update(positionDataCommon, config.sid.position, range)
-          .then(async results => {console.log(results);})
-          .catch(console.log);
+        }
 
       } catch (e) {
         reject(e.stack);

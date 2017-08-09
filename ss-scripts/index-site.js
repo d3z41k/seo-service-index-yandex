@@ -122,9 +122,14 @@ async function indexSite(flag) {
         range = list.index + config.range.date.index;
         let dateRaw = await crud.read(config.sid.index, range);
 
+        range = list.index + config.range.date.index_add;
+        let dateAdd = await crud.read(config.sid.index, range);
+
         let date = _.remove(dateRaw[0], n => {
           return n != '';
         });
+
+        date.push(dateAdd[0][0]);
 
         seoProjects = seoProjects.map(project => {
           return project[0];
@@ -136,7 +141,7 @@ async function indexSite(flag) {
 
         for (let p = 0; p < seoProjects.length; p++) {
           result.push([]);
-          for (let d = 0; d < resultRaw.length; d++) {
+          for (let d = 0; d < resultRaw.length - 1; d++) {
             if (resultRaw[d][p]) {
               result[p].push(resultRaw[d][p][0]);
             } else {
@@ -146,9 +151,17 @@ async function indexSite(flag) {
           }
         }
 
-        range = list.index + config.range.result.index;
+        result.forEach((line, i) => {
+          if (resultRaw[resultRaw.length-1][i][0]) {
+            line.push(null, line[0], null, resultRaw[resultRaw.length-1][i][0]);
+          } else {
+            line.push(null, line[0], null, 0);
+          }
+        });
 
         //console.log(result);
+
+        range = list.index + config.range.result.index;
 
         await crud.update(result, config.sid.index, range)
           .then(async results => {console.log(results);})
