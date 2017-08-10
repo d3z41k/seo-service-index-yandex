@@ -112,8 +112,7 @@ async function positionSingle() {
         let topKeys = 0;
 
         positionData.forEach(data => {
-          if(data[1] && Number(data[1]) < 11) {
-            console.log(data[1]);
+          if(Number(data[1]) && Number(data[1]) < 11) {
             topKeys++;
           }
           if (data[0]) {
