@@ -119,6 +119,25 @@ async function indexSite(flag) {
         // Query to DB and insert the data in a destination table
         //---------------------------------------------------------------
 
+        // Clear result cells -------------------------------------------
+
+        let clearResult = [];
+
+        for (let i = 0; i < 200; i++) {
+          clearResult.push([
+            '', null, '', null, '', null, '', null, '',
+            null, '', null, '', null, null, '', null, ''
+          ]);
+        }
+
+        range = list.index + config.range.result.index;
+
+        await crud.update(clearResult, config.sid.index, range)
+          .then(async results => {console.log(results);})
+          .catch(console.log);
+
+        //---------------------------------------------------------------
+
         range = list.index + config.range.date.index;
         let dateRaw = await crud.read(config.sid.index, range);
 

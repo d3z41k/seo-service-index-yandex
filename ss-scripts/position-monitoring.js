@@ -1,7 +1,6 @@
 'use strict';
 
 const config = require('config');
-const punycode = require('punycode');
 const request = require('koa2-request');
 const _ = require('lodash/array');
 const {promisify} = require('util');
@@ -9,7 +8,7 @@ const {promisify} = require('util');
 const fs = require('fs');
 const readFileAsync = promisify(fs.readFile);
 
-async function positionSite(flag) {
+async function positionSite(flag, direction) {
   return new Promise(async (resolve, reject) => {
 
     //-------------------------------------------------------------------------
@@ -19,6 +18,7 @@ async function positionSite(flag) {
     require('../libs/auth')(start);
     const Crud = require('../controllers/crud');
     const formatDate = require('../libs/format-date');
+    const formatSite = require('../libs/format-site');
     const sleep = require('../libs/sleep');
     const pool = require('../libs/db_pool');
     const dbInsert = require('../libs/db_insert');
@@ -33,13 +33,12 @@ async function positionSite(flag) {
       const crud = new Crud(auth);
 
       let list = {
-        'position': encodeURIComponent('Эвакуатор'),
+        'position': encodeURIComponent(direction),
       };
 
       let range = '';
       let result = [];
       let regions = [];
-
 
       //---------------------------------------------------------------
       // The seo projects update
@@ -63,10 +62,7 @@ async function positionSite(flag) {
 
         if (line.length == 2 && line[0] && line[1]) {
 
-          let site = line[1].replace(/http:\/\//g, '');
-          site = site.replace(/www./g, '');
-          site = site.trim();
-          site = punycode.toASCII(site);
+          let site = formatSite(line[1])
 
           positionParam[site] = {
             'start': l + 3,
@@ -82,7 +78,7 @@ async function positionSite(flag) {
 
       });
 
-      //console.log(positionParam);
+      console.log(positionParam);
 
       resolve('ok!'); //for avoid timeout
 
@@ -138,78 +134,108 @@ async function positionSite(flag) {
 
       } // end request and write in DB
 
-      if (flag) { //get data from DB
+      //---------------------------------------------------------------
+      // Get data from DB
+      //---------------------------------------------------------------
 
-        range = list.position + config.range.date.position;
-        let dateSample = await crud.read(config.sid.position, range);
+      //- Clear result cells -----------------------------------------
 
-        for (let project in positionParam) {
-          if (positionParam.hasOwnProperty(project)) {
+      let clearResult1 = [];
+      let clearResult2 = [];
+      let range1 = '';
+      let range2 = '';
 
-            let site = project;
-            let start = positionParam[project].start;
-            let region = positionParam[project].region;
-            let keywords = positionParam[project].keywords.map(keyword => {
-              return decodeURIComponent(keyword);
-            });
+      for (let i = 0; i < 1000; i++) {
+        clearResult1.push(['']);
+      }
 
-            let params = [dateSample[0], [site], keywords];
-
-            let positionData = await positionQuery(pool, config.table.position, params);
-            let positionDataCommon = [];
-
-            //console.log(require('util').inspect(positionData, { depth: null }));
-
-            let url = positionData[0];
-
-            url = url.map(line => {
-              return [line[0]];
-            });
-
-            range = list.position + '!F' + (start + 1) + ':F';
-
-            await crud.update(url, config.sid.position, range)
-              .then(async results => {console.log(results);})
-              .catch(console.log);
-
-            positionData.forEach(dataDay => {
-
-              let tempData = [];
-              let top10 = 0;
-              let topKeys = 0;
-
-              dataDay.forEach(data => {
-                if(Number(data[1]) && Number(data[1]) < 11) {
-                  topKeys++;
-                }
-              });
-
-              top10 = topKeys / dataDay.length * 100;
-              top10 = Math.round(top10 * 100) / 100;
-              tempData.push([top10]);
-
-              dataDay.forEach(data =>  {
-                tempData.push([data.pop()]);
-              });
-
-              if (!positionDataCommon.length) {
-                positionDataCommon = tempData;
-              } else {
-                for (var i = 0; i < tempData.length; i++) {
-                  positionDataCommon[i].push(tempData[i][0]);
-                }
-              }
-
-            });
-
-            range = list.position + '!J' + start + ':AN';
-
-            await crud.update(positionDataCommon, config.sid.position, range)
-              .then(async results => {console.log(results);})
-              .catch(console.log);
-          }
+      for (let k = 0; k < 1000; k++) {
+        clearResult2.push(['']);
+        for (let l = 0; l < 30; l++) {
+          clearResult2[k].push('');
         }
+      }
 
+      range1 = list.position + '!F4:F';
+      range2 = list.position + '!J3:AN';
+
+      await Promise.all([
+        crud.update(clearResult1, config.sid.position, range1),
+        crud.update(clearResult2, config.sid.position, range2)
+      ])
+        .then(async results => {console.log(results);})
+        .catch(console.log);
+
+      //---------------------------------------------------------------
+
+      range = list.position + config.range.date.position;
+      let dateSample = await crud.read(config.sid.position, range);
+
+      for (let project in positionParam) {
+        if (positionParam.hasOwnProperty(project)) {
+
+          let site = project;
+          let start = positionParam[project].start;
+          let region = positionParam[project].region;
+          let keywords = positionParam[project].keywords.map(keyword => {
+            return decodeURIComponent(keyword);
+          });
+
+          let params = [dateSample[0], site, keywords];
+
+          let positionData = await positionQuery(pool, config.table.position, params);
+          let positionDataCommon = [];
+
+          //console.log(require('util').inspect(positionData, { depth: null }));
+
+          let url = positionData[0];
+
+          url = url.map(line => {
+            return [line[0]];
+          });
+
+          range = list.position + '!F' + (start + 1) + ':F';
+
+          await crud.update(url, config.sid.position, range)
+            .then(async results => {console.log(results);})
+            .catch(console.log);
+
+          positionData.forEach(dataDay => {
+
+            let tempData = [];
+            let top10 = 0;
+            let topKeys = 0;
+
+            dataDay.forEach(data => {
+              if(Number(data[1]) && Number(data[1]) < 11) {
+                topKeys++;
+              }
+            });
+
+            top10 = topKeys / dataDay.length * 100;
+            top10 = Math.round(top10 * 100) / 100;
+            tempData.push([top10]);
+
+            dataDay.forEach(data =>  {
+              tempData.push([data.pop()]);
+            });
+
+            if (!positionDataCommon.length) {
+              positionDataCommon = tempData;
+            } else {
+              for (var i = 0; i < tempData.length; i++) {
+                positionDataCommon[i].push(tempData[i][0]);
+              }
+            }
+
+          });
+
+          range = list.position + '!J' + start + ':AN';
+
+          await crud.update(positionDataCommon, config.sid.position, range)
+            .then(async results => {console.log(results);})
+            .catch(console.log);
+        }
       }
 
     } // = End start function =

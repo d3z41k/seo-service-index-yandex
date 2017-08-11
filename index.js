@@ -18,13 +18,15 @@ router
     const positionSingle = require('./ss-scripts/position-single');
     ctx.body = await positionSingle();
   })
-  .get('/position-monitoring/', async ctx => {
+  .get('/position-monitoring/:direction', async ctx => {
+    const direction = ctx.params.direction;
     const positionMonitoring = require('./ss-scripts/position-monitoring');
-    ctx.body = await positionMonitoring(false);
+    ctx.body = await positionMonitoring(false, direction);
   })
-  .get('/position-monitoring/update', async ctx => {
+  .get('/position-monitoring/update/:direction', async ctx => {
+    const direction = ctx.params.direction;
     const positionMonitoring = require('./ss-scripts/position-monitoring');
-    ctx.body = await positionMonitoring(true);
+    ctx.body = await positionMonitoring(true, direction);
 });
 
 const server = app.listen({port: 3002}, () => {

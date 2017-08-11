@@ -4,7 +4,6 @@
 'use strict';
 
 const config = require('config');
-const punycode = require('punycode');
 const request = require('koa2-request');
 const _ = require('lodash/array');
 const {promisify} = require('util');
@@ -22,6 +21,7 @@ async function positionSingle() {
     require('../libs/auth')(start);
     const Crud = require('../controllers/crud');
     const formatDate = require('../libs/format-date');
+    const formatSite = require('../libs/format-site');
     const sleep = require('../libs/sleep');
 
     //---------------------------------------------------------------
@@ -77,10 +77,7 @@ async function positionSingle() {
 
         //= Processing the seo ptoject =
 
-        site = site.replace(/http:\/\//g, '');
-        site = site.replace(/www./g, '');
-        site = site.trim();
-        site = punycode.toASCII(site);
+        site = formatSite(site);
 
         keys = keys.map(key => {
           return encodeURIComponent(key);
@@ -108,6 +105,22 @@ async function positionSingle() {
 
         }
 
+        // Clear result cells -------------------------------------------
+
+        let clearResult = [];
+
+        for (let i = 0; i < 190; i++) {
+          clearResult.push(['', '']);
+        }
+
+        range = list.position + config.range.result.positionSingle;
+
+        await crud.update(clearResult, config.sid.position, range)
+          .then(async results => {console.log(results);})
+          .catch(console.log);
+
+        //---------------------------------------------------------------
+
         let top10 = 0;
         let topKeys = 0;
 
@@ -127,6 +140,7 @@ async function positionSingle() {
         positionData.unshift([null, top10]);
 
         range = list.position + config.range.result.positionSingle;
+
         await crud.update(positionData, config.sid.position, range)
           .then(async results => {console.log(results);})
           .catch(console.log);
