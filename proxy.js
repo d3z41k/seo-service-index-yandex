@@ -73,7 +73,8 @@ router
       ctx.body = [now, params.query, 'error', jsonBody.yandexsearch.response.error.$t].join();
     }
 
-  }).get('/position/:user/:key/:query/:region/:site/', async (ctx, next) => {
+  })
+  .get('/position/:user/:key/:query/:region/:site/', async (ctx, next) => {
     let params = ctx.params;
 
     let response = await request({
@@ -121,8 +122,48 @@ router
     now = now.split(',')[0];
 
     ctx.body = now + ',' + params.site + ',' + params.query + ',' + url + ',' + position;
-});
+  })
+  .get('/top/:user/:key/:query/:region/', async (ctx, next) => {
+    let params = ctx.params;
 
+    let response = await request({
+        url: 'https://yandex.ru/search/xml?' +
+          'user=' + params.user +
+          '&key=' + params.key +
+          '&query=' + encodeURIComponent(params.query) +
+          '&lr=' + params.region +
+          '&l10n=ru' +
+          '&sortby=rlv' +
+          '&filter=none' +
+          '&groupby=attr=\"\".mode=flat.groups-on-page=10.docs-in-group=1',
+
+        method: 'get',
+        headers: {
+          'User-Agent': 'request',
+          'content-type': 'application/xml',
+          'charset': 'UTF-8'
+        },
+    });
+
+    let resultSite = [];
+    let sites = [];
+    let urls = [];
+
+    let jsonBody = parser.toJson(response.body);
+    jsonBody = JSON.parse(jsonBody);
+
+    let resultGroup = jsonBody.yandexsearch.response.results.grouping.group;
+
+    resultGroup.forEach(result => {
+      resultSite.push(result.doc);
+    });
+
+    for (let i = 0; i < resultSite.length; i++) {
+        sites.push([params.query, resultSite[i]['domain'], resultSite[i]['url']]);
+    }
+
+    ctx.body = sites;
+});
 
 const server = app.listen({port: 3001}, () => {
   console.log('Proxy start on port: 3001...');

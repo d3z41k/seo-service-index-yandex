@@ -78,7 +78,7 @@ async function positionSite(flag, direction) {
 
       });
 
-      console.log(positionParam);
+      //console.log(positionParam);
 
       resolve('ok!'); //for avoid timeout
 
