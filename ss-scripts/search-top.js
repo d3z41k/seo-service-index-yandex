@@ -21,9 +21,9 @@ async function searchTop() {
     const formatSite = require('../libs/format-site');
     const sleep = require('../libs/sleep');
 
-    //---------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Main function
-    //---------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     async function start(auth) {
 
@@ -41,17 +41,13 @@ async function searchTop() {
       let region = '';
       let regions = [];
       let keywords = [];
-
-      //---------------------------------------------------------------
-      // The seo projects update
-      //---------------------------------------------------------------
+      let sitesAll = [];
 
       await readFileAsync('./libs/regions.json', {encoding: 'utf8'})
         .then(data => {
           regions = JSON.parse(data);
         })
         .catch(console.log);
-
 
         range = list.top10 + '!A2:C';
         let top10Params = await crud.read(config.sid.top10, range);
@@ -66,9 +62,7 @@ async function searchTop() {
 
         resolve('ok!'); //for avoid timeout
 
-        //---------------------------------------------------------------
-        //
-        //---------------------------------------------------------------
+        //- Request data to xml.yandex -----------------------------------------
 
         try {
 
@@ -96,7 +90,7 @@ async function searchTop() {
               await sleep(1500);
           }
 
-          //- Clear result cells ---------------------------------------------
+          //- Clear result cells -----------------------------------------------
 
           let range1 = '';
           let range2 = '';
@@ -110,139 +104,84 @@ async function searchTop() {
           }
 
           for (let i = 0; i < 1000; i++) {
-            clearResult2.push(['']);
+            clearResult2.push(['', null , '', '']);
           }
 
           range1 = list.top10 + '!F3:G';
-          range2 = list.top10 + '!J3:J';
-          range3 = list.top10 + '!L3:L';
+          range2 = list.top10 + '!J3:M';
 
           await Promise.all([
             crud.update(clearResult1, config.sid.top10, range1),
             crud.update(clearResult2, config.sid.top10, range2),
-            crud.update(clearResult2, config.sid.top10, range3)
           ])
-            .then(async results => {console.log(results);})
+          //  .then(async results => {console.log(results);})
             .catch(console.log);
 
-          //------------------------------------------------------------------
+          //- Get TOP-10 -------------------------------------------------------
+
+          let top10 = {};
+          let top10Sort = [];
+          let divider = keywords.length;
 
           top10DataArr.forEach(top10Data => {
             top10Data = JSON.parse(top10Data);
             top10Data.forEach((data, i) => {
-              if (!i) {
-                top10DataFinal.push([data[0], null, data[1], data[2]]);
+
+              if (!sitesAll.includes(data[1])) {
+                sitesAll.push(data[1]);
+                top10[data[1]] = 1;
               } else {
-                top10DataFinal.push([null, null, data[1], data[2]]);
+                top10[data[1]]++;
               }
+
+              let url = data[2]
+              url = url.replace(/http:\/\//g, '');
+              url = url.replace(/https:\/\//g, '');
+              url = url.replace(/www./g, '');
+              url = url.replace(data[1], '');
+
+              if (!i) {
+                top10DataFinal.push([data[0], null, data[1], url]);
+              } else {
+                top10DataFinal.push([null, null, data[1], url]);
+              }
+
             });
           });
 
-          //console.log(top10DataFinal);
+          for (site in top10) {
+            if (top10.hasOwnProperty(site)) {
+              top10[site] = top10[site] / divider * 100;
+              top10[site] = Math.round(top10[site] * 100) / 100;
+              top10[site] > 100 ? top10[site] = 100 : top10[site];
+            }
+          }
+
+          //- Sort TOP-10 ------------------------------------------------------
+
+          for (site in top10) {
+            top10Sort.push([site, top10[site]]);
+          }
+          top10Sort.sort((a, b) => {
+              return b[1] - a[1];
+          });
+          top10Sort.length = 10;
+
+          //- Insert TOP-10 ----------------------------------------------------
 
           range = list.top10 + '!J3:M';
-
           await crud.update(top10DataFinal, config.sid.top10, range)
-            .then(async results => {console.log(results);})
+          //  .then(async results => {console.log(results);})
+            .catch(console.log);
+
+          range = list.top10 + '!F3:G';
+          await crud.update(top10Sort, config.sid.top10, range)
+          //  .then(async results => {console.log(results);})
             .catch(console.log);
 
         } catch (e) {
            reject(e.stack);
         }
-
-      // try {
-      //
-      //   range = list.position + config.range.params.position;
-      //   let positionParamRaw = await crud.read(config.sid.position, range);
-      //
-      //   site = positionParamRaw[0][1];
-      //   region = regions[positionParamRaw[0][0]];
-      //
-      //   positionParamRaw.forEach((params, p)=> {
-      //     if (p > 1) {
-      //       keys.push(params[3]);
-      //     }
-      //   });
-      //
-      //   resolve('ok!'); //for avoid timeout
-      //
-      //   //---------------------------------------------------------------
-      //   //
-      //   //---------------------------------------------------------------
-      //
-      //   //= Processing the seo ptoject =
-      //
-      //   site = formatSite(site);
-      //
-      //   keys = keys.map(key => {
-      //     return encodeURIComponent(key);
-      //   });
-      //
-      //   for (let i = 0; i < keys.length; i++) {
-      //
-      //     let response = await request({
-      //         url: 'http://' + config.server.ip + ':3001/position/'
-      //         + config.yandex.user + '/'
-      //         + config.yandex.key + '/'
-      //         + keys[i] + '/'
-      //         + region + '/'
-      //         + site,
-      //         method: 'get',
-      //         headers: {
-      //           'User-Agent': 'request',
-      //           'content-type': 'application/json',
-      //           'charset': 'UTF-8'
-      //         },
-      //     });
-      //
-      //     positionData.push(response.body.split(',').splice(3, 2));
-      //     await sleep(1500);
-      //
-      //   }
-      //
-      //   // Clear result cells -------------------------------------------
-      //
-      //   let clearResult = [];
-      //
-      //   for (let i = 0; i < 190; i++) {
-      //     clearResult.push(['', '']);
-      //   }
-      //
-      //   range = list.position + config.range.result.positionSingle;
-      //
-      //   await crud.update(clearResult, config.sid.position, range)
-      //     .then(async results => {console.log(results);})
-      //     .catch(console.log);
-      //
-      //   //---------------------------------------------------------------
-      //
-      //   let top10 = 0;
-      //   let topKeys = 0;
-      //
-      //   positionData.forEach(data => {
-      //     if(Number(data[1]) && Number(data[1]) < 11) {
-      //       topKeys++;
-      //     }
-      //     if (data[0]) {
-      //       data[0] = data[0].replace(/http:\/\//g, '');
-      //       data[0] = data[0].replace(/www./g, '');
-      //       data[0] = data[0].replace(site, '');
-      //     }
-      //   });
-      //
-      //   top10 = topKeys / positionData.length * 100;
-      //   top10 = Math.round(top10 * 100) / 100;
-      //   positionData.unshift([null, top10]);
-      //
-      //   range = list.position + config.range.result.positionSingle;
-      //
-      //   await crud.update(positionData, config.sid.position, range)
-      //     .then(async results => {console.log(results);})
-      //     .catch(console.log);
-      //
-      // } catch (e) {
-      //   reject(e.stack);
-      // }
 
     } // = End start function =
 
