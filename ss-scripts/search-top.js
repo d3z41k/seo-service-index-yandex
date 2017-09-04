@@ -2,13 +2,16 @@
 
 const config = require('config');
 const request = require('koa2-request');
+const cheerio = require('cheerio');
 const _ = require('lodash/array');
 const {promisify} = require('util');
+const Iconv  = require('iconv').Iconv;
+const translator = new Iconv('cp1251', 'utf-8');
 
 const fs = require('fs');
 const readFileAsync = promisify(fs.readFile);
 
-async function searchTop() {
+async function searchTop(sheet) {
   return new Promise(async (resolve, reject) => {
 
     //--------------------------------------------------------------------------
@@ -42,6 +45,8 @@ async function searchTop() {
       let regions = [];
       let keywords = [];
       let sitesAll = [];
+      let urlAll = [];
+      let mataAll = [];
 
       await readFileAsync('./libs/regions.json', {encoding: 'utf8'})
         .then(data => {
@@ -49,45 +54,45 @@ async function searchTop() {
         })
         .catch(console.log);
 
-        range = list.top10 + '!A2:C';
-        let top10Params = await crud.read(config.sid.top10, range);
+      range = list.top10 + '!A2:C';
+      let top10Params = await crud.read(config.sid.top10, range);
 
-        region = regions[top10Params[0][0]];
+      region = regions[top10Params[0][0]];
 
-        top10Params.forEach((params, p)=> {
-          if (p > 0) {
-            keywords.push(params[2]);
-          }
+      top10Params.forEach((params, p)=> {
+        if (p > 0) {
+          keywords.push(params[2]);
+        }
+      });
+
+      resolve('ok!'); //for avoid timeout
+
+      //- Request data to xml.yandex -----------------------------------------
+
+      //try {
+
+        keywords = keywords.map(keyword => {
+            return encodeURIComponent(keyword);
         });
 
-        resolve('ok!'); //for avoid timeout
+        for (let i = 0; i < keywords.length; i++) {
 
-        //- Request data to xml.yandex -----------------------------------------
+            let response = await request({
+                url: 'http://' + config.server.ip + ':3001/top/'
+                + config.yandex.user + '/'
+                + config.yandex.key + '/'
+                + keywords[i] + '/'
+                + region,
+                method: 'get',
+                headers: {
+                  'User-Agent': 'request',
+                  'content-type': 'application/json',
+                  'charset': 'UTF-8'
+                },
+            });
 
-        try {
-
-          keywords = keywords.map(keyword => {
-              return encodeURIComponent(keyword);
-          });
-
-          for (let i = 0; i < keywords.length; i++) {
-
-              let response = await request({
-                  url: 'http://' + config.server.ip + ':3001/top/'
-                  + config.yandex.user + '/'
-                  + config.yandex.key + '/'
-                  + keywords[i] + '/'
-                  + region,
-                  method: 'get',
-                  headers: {
-                    'User-Agent': 'request',
-                    'content-type': 'application/json',
-                    'charset': 'UTF-8'
-                  },
-              });
-
-              top10DataArr.push(response.body.split(','));
-              await sleep(1500);
+            top10DataArr.push(response.body.split(','));
+            await sleep(1500);
           }
 
           //- Clear result cells -----------------------------------------------
@@ -104,11 +109,11 @@ async function searchTop() {
           }
 
           for (let i = 0; i < 1000; i++) {
-            clearResult2.push(['', null , '', '']);
+            clearResult2.push(['', null , '', '', '', '', '', '', '', '', '', '', '']);
           }
 
           range1 = list.top10 + '!F3:G';
-          range2 = list.top10 + '!J3:M';
+          range2 = list.top10 + '!J3:V';
 
           await Promise.all([
             crud.update(clearResult1, config.sid.top10, range1),
@@ -134,11 +139,8 @@ async function searchTop() {
                 top10[data[1]]++;
               }
 
-              let url = data[2]
-              url = url.replace(/http:\/\//g, '');
-              url = url.replace(/https:\/\//g, '');
-              url = url.replace(/www./g, '');
-              url = url.replace(data[1], '');
+              let url = data[2];
+              urlAll.push(url);
 
               if (!i) {
                 top10DataFinal.push([data[0], null, data[1], url]);
@@ -179,9 +181,50 @@ async function searchTop() {
           //  .then(async results => {console.log(results);})
             .catch(console.log);
 
-        } catch (e) {
-           reject(e.stack);
-        }
+          //-  ----------------------------------------------------
+
+          for (var u = 0; u < urlAll.length; u++) {
+
+            let response = await request({
+                url: urlAll[u],
+                encoding: null,
+            });
+
+            let body = response.body;
+            //body = translator.convert(response.body).toString(); // convert windows-1251 to utf-8
+            const $ = cheerio.load(body);
+
+            let title = $('title').text();
+            let description = $('meta[name="description"]').attr('content');
+            let h1 = $('h1').text();
+            let h2 = $('h2').toArray().map(value => {
+              return $(value).text();
+            });
+
+            title ? title = title.replace(/\n/g, '').trim() : '';
+            description ? description = description.replace(/\n/g, '').trim() : '';
+            h1 ? h1 = h1.replace(/\n/g, '').trim() : '';
+
+            let meta = [title, description, h1];
+
+            h2.forEach((header, i)=> {
+              if (i < 5) {
+                header ? meta.push(header.replace(/\n/g, '').trim()) : meta.push('');
+              }
+            });
+
+            mataAll.push(meta);
+
+          }
+
+          range = list.top10 + '!O3:V';
+          await crud.update(mataAll, config.sid.top10, range)
+            .then(async results => {console.log(results);})
+            .catch(console.log);
+
+        // } catch (e) {
+        //   reject(e.stack);
+        // }
 
     } // = End start function =
 

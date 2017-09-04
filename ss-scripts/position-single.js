@@ -8,7 +8,7 @@ const {promisify} = require('util');
 const fs = require('fs');
 const readFileAsync = promisify(fs.readFile);
 
-async function positionSingle() {
+async function positionSingle(sheet) {
   return new Promise(async (resolve, reject) => {
 
     //-------------------------------------------------------------------------
@@ -30,7 +30,7 @@ async function positionSingle() {
       const crud = new Crud(auth);
 
       let list = {
-        'position': encodeURIComponent('Разовая проверка'),
+        'position': encodeURIComponent(sheet),
       };
 
       let range = '';

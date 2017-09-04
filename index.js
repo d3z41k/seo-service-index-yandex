@@ -14,9 +14,11 @@ router
   .get('/index-site/update', async ctx => {
     const indexSite = require('./ss-scripts/index-site');
     ctx.body = await indexSite(true);
-  }).get('/position-single', async ctx => {
+  })
+  .get('/position-single/:sheet', async ctx => {
+    const sheet = ctx.params.sheet;
     const positionSingle = require('./ss-scripts/position-single');
-    ctx.body = await positionSingle();
+    ctx.body = await positionSingle(sheet);
   })
   .get('/position-monitoring/:direction', async ctx => {
     const direction = ctx.params.direction;
@@ -28,9 +30,10 @@ router
     const positionMonitoring = require('./ss-scripts/position-monitoring');
     ctx.body = await positionMonitoring(true, direction);
   })
-  .get('/search-top', async ctx => {
+  .get('/search-top/:sheet', async ctx => {
+    const sheet = ctx.params.sheet;
     const searchTop = require('./ss-scripts/search-top');
-    ctx.body = await searchTop();
+    ctx.body = await searchTop(sheet);
 });
 
 const server = app.listen({port: 3002}, () => {

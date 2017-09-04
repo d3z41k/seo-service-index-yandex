@@ -17,9 +17,12 @@
   },
   "homepage": "https://github.com/d3z41k/seo-service-index-yandex",
   "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
     "config": "^1.26.1",
     "google-auth-library": "^0.10.0",
     "googleapis": "^20.1.0",
+    "iconv": "^2.3.0",
+    "iconv-lite": "^0.4.18",
     "koa": "^2.3.0",
     "koa-bodyparser": "^4.2.0",
     "koa-request": "^1.0.0",
