@@ -33,7 +33,7 @@ async function searchTop(sheet) {
       const crud = new Crud(auth);
 
       let list = {
-        'top10': encodeURIComponent('ТОП-10'),
+        'top10': encodeURIComponent(sheet),
       };
 
       let range = '';
