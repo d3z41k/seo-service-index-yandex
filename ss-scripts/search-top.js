@@ -46,7 +46,6 @@ async function searchTop(sheet) {
       let keywords = [];
       let sitesAll = [];
       let urlAll = [];
-      let mataAll = [];
 
       await readFileAsync('./libs/regions.json', {encoding: 'utf8'})
         .then(data => {
@@ -69,7 +68,7 @@ async function searchTop(sheet) {
 
       //- Request data to xml.yandex -----------------------------------------
 
-      //try {
+      // try {
 
         keywords = keywords.map(keyword => {
             return encodeURIComponent(keyword);
@@ -93,6 +92,8 @@ async function searchTop(sheet) {
 
             top10DataArr.push(response.body.split(','));
             await sleep(1500);
+            
+            //console.log('get top-10 ' + i);
           }
 
           //- Clear result cells -----------------------------------------------
@@ -108,7 +109,7 @@ async function searchTop(sheet) {
             clearResult1.push(['', '']);
           }
 
-          for (let i = 0; i < 1000; i++) {
+          for (let i = 0; i < 3000; i++) {
             clearResult2.push(['', null , '', '', '', '', '', '', '', '', '', '', '']);
           }
 
@@ -181,44 +182,92 @@ async function searchTop(sheet) {
           //  .then(async results => {console.log(results);})
             .catch(console.log);
 
-          //-  ----------------------------------------------------
+          //- Parse results ----------------------------------------------------
+
+          let mataAll = [];
+          let corpus = {};
 
           for (var u = 0; u < urlAll.length; u++) {
 
             let response = await request({
                 url: urlAll[u],
                 encoding: null,
+                rejectUnauthorized: false,
+            })
+            .catch(() => {
+              mataAll.push(['','','','','','','','']);
             });
 
-            let body = response.body;
-            //body = translator.convert(response.body).toString(); // convert windows-1251 to utf-8
-            const $ = cheerio.load(body);
+            if (response) {
 
-            let title = $('title').text();
-            let description = $('meta[name="description"]').attr('content');
-            let h1 = $('h1').text();
-            let h2 = $('h2').toArray().map(value => {
-              return $(value).text();
-            });
+               let body = response.body;
+               //body = translator.convert(response.body).toString(); // convert windows-1251 to utf-8
+               const $ = cheerio.load(body);
 
-            title ? title = title.replace(/\n/g, '').trim() : '';
-            description ? description = description.replace(/\n/g, '').trim() : '';
-            h1 ? h1 = h1.replace(/\n/g, '').trim() : '';
+               let text = $('body').text();
+               let title = $('title').text();
+               let description = $('meta[name="description"]').attr('content');
+               let h1 = $('h1').text();
+               let h2 = $('h2').toArray().map(value => {
+                 return $(value).text();
+               });
 
-            let meta = [title, description, h1];
+               text = text.replace(/\s+/g, ' ')
+                        .replace(/[^а-яёА-ЯЁ ]/g, '')
+                        .toLowerCase();
 
-            h2.forEach((header, i)=> {
-              if (i < 5) {
-                header ? meta.push(header.replace(/\n/g, '').trim()) : meta.push('');
-              }
-            });
+               text = text.split(' ');
 
-            mataAll.push(meta);
+               for (let w = 0; w < text.length; w++) {
+                 if (text[w].length > 4 && text[w].length < 20) {
+                   if (corpus[text[w]]) {
+                     corpus[text[w]]++;
+                   } else {
+                     corpus[text[w]] = 1;
+                   }
+                 }
+               }
 
+               title ? title = title.replace(/\n/g, '').trim() : '';
+               description ? description = description.replace(/\n/g, '').trim() : '';
+               h1 ? h1 = h1.replace(/\n/g, '').trim() : '';
+
+               let meta = [title, description, h1];
+
+               h2.forEach((header, i)=> {
+                 if (i < 5) {
+                   header ? meta.push(header.replace(/\n/g, '').trim()) : meta.push('');
+                 }
+               });
+
+               mataAll.push(meta);
+
+               //console.log('get meta' + u);
+
+            }
+          } //end urlAll
+
+          let words = [];
+
+          for (let prop in corpus) {
+            if (corpus.hasOwnProperty(prop)) {
+              words.push([prop, corpus[prop]]);
+            }
           }
 
-          range = list.top10 + '!O3:V';
-          await crud.update(mataAll, config.sid.top10, range)
+          words.sort((a, b) => {
+            return b[1] - a[1];
+          });
+
+          words = words.slice(0, 30);
+
+          range1 = list.top10 + '!O3:V';
+          range2 = list.top10 + '!X3:Y';
+
+          await Promise.all([
+            crud.update(mataAll, config.sid.top10, range1),
+            crud.update(words, config.sid.top10, range2),
+          ])
             .then(async results => {console.log(results);})
             .catch(console.log);
 

@@ -51,7 +51,7 @@ async function positionSite(flag, direction) {
         .catch(console.log);
 
       range = list.position + config.range.params.position;
-      let positionParamRaw = await crud.read(config.sid.position, range);
+      let positionParamRaw = await crud.read(config.sid.positionProfi, range);
 
       //console.log(positionParamRaw);
 
@@ -160,8 +160,8 @@ async function positionSite(flag, direction) {
       range2 = list.position + '!J3:AN';
 
       await Promise.all([
-        crud.update(clearResult1, config.sid.position, range1),
-        crud.update(clearResult2, config.sid.position, range2)
+        crud.update(clearResult1, config.sid.positionProfi, range1),
+        crud.update(clearResult2, config.sid.positionProfi, range2)
       ])
         .then(async results => {console.log(results);})
         .catch(console.log);
@@ -169,7 +169,7 @@ async function positionSite(flag, direction) {
       //---------------------------------------------------------------
 
       range = list.position + config.range.date.position;
-      let dateSample = await crud.read(config.sid.position, range);
+      let dateSample = await crud.read(config.sid.positionProfi, range);
 
       for (let project in positionParam) {
         if (positionParam.hasOwnProperty(project)) {
@@ -196,7 +196,7 @@ async function positionSite(flag, direction) {
 
           range = list.position + '!F' + (start + 1) + ':F';
 
-          await crud.update(url, config.sid.position, range)
+          await crud.update(url, config.sid.positionProfi, range)
             .then(async results => {console.log(results);})
             .catch(console.log);
 
@@ -232,7 +232,7 @@ async function positionSite(flag, direction) {
 
           range = list.position + '!J' + start + ':AN';
 
-          await crud.update(positionDataCommon, config.sid.position, range)
+          await crud.update(positionDataCommon, config.sid.positionProfi, range)
             .then(async results => {console.log(results);})
             .catch(console.log);
         }
