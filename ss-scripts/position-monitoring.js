@@ -8,7 +8,7 @@ const {promisify} = require('util');
 const fs = require('fs');
 const readFileAsync = promisify(fs.readFile);
 
-async function positionSite(flag, direction) {
+async function positionMonitoring(flag, direction) {
   return new Promise(async (resolve, reject) => {
 
     //-------------------------------------------------------------------------
@@ -243,4 +243,4 @@ async function positionSite(flag, direction) {
   });
 }
 
-module.exports = positionSite;
+module.exports = positionMonitoring;

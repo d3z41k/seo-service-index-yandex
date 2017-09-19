@@ -30,6 +30,11 @@ router
     const positionMonitoring = require('./ss-scripts/position-monitoring');
     ctx.body = await positionMonitoring(true, direction);
   })
+  .get('/uptime-monitoring', async ctx => {
+    const direction = ctx.params.direction;
+    const uptimeMonitoring = require('./ss-scripts/uptime-monitoring');
+    ctx.body = await uptimeMonitoring();
+  })
   .get('/search-top/:sheet', async ctx => {
     const sheet = ctx.params.sheet;
     const searchTop = require('./ss-scripts/search-top');
