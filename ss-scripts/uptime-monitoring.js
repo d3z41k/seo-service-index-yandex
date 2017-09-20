@@ -4,7 +4,7 @@ const config = require('config');
 const request = require('koa2-request');
 const _ = require('lodash/array');
 
-async function uptimeMonitoring(flag, direction) {
+async function uptimeMonitoring(update) {
   return new Promise(async (resolve, reject) => {
 
     //-------------------------------------------------------------------------
@@ -19,7 +19,7 @@ async function uptimeMonitoring(flag, direction) {
     const pool = require('../libs/db_pool');
     const dbNotExists = require('../libs/db_not-exists');
     const dbInsert = require('../libs/db_insert');
-    const positionQuery = require('../libs/db_position-query');
+    const uptimeQuery = require('../libs/db_uptime-query');
 
     //---------------------------------------------------------------
     // Main function
@@ -38,166 +38,93 @@ async function uptimeMonitoring(flag, direction) {
       let regions = [];
 
       //---------------------------------------------------------------
-      // The seo projects update
+      // Get projects and date for uptime
       //---------------------------------------------------------------
 
       range = list.main + config.range.params.uptime;
-      let uptimeProjects = await crud.read(config.sid.uptime, range);
+      let uptimeParams = await crud.read(config.sid.uptime, range);
+      let uptimeProjects = [];
+      let uptimeDate = '';
 
-      uptimeProjects = uptimeProjects.map(project => {
-        return project[0];
+      uptimeParams.forEach((row, p) => {
+        if (p) {
+          uptimeProjects.push(row[0]);
+        } else {
+          row.shift();
+          uptimeDate = row;
+        }
       });
 
       resolve('ok!'); //for avoid timeout
 
-      try {
-        if (true) { // make request and write in DB
+      if (!update) { // make request and write in DB
 
-          let now = new Date();
-          now = formatDate(now);
-          now = now.split(',')[0];
+        let now = new Date();
+        now = formatDate(now);
+        now = now.split(',')[0];
 
-          for (let p = 0; p < uptimeProjects.length; p++) {
+        for (let p = 0; p < uptimeProjects.length; p++) {
 
-            let failData = [];
+          let failData = [];
 
-            let response = await request({
-                url: 'http://' + uptimeProjects[p],
-                method: 'get',
-                headers: {
-                  'User-Agent': 'request',
-                },
-            }).catch((err) => {
-              failData.push(now, uptimeProjects[p], 'faled');
-            });
+          let response = await request({
+              url: 'http://' + uptimeProjects[p],
+              method: 'get',
+              headers: {
+                'User-Agent': 'request',
+              },
+          }).catch((err) => {
+            failData.push(now, uptimeProjects[p], 'fail');
+          });
 
-            if (response && response.statusCode !== 200) {
-              failData.push(now, uptimeProjects[p], 'faled');
-            }
-
-            if (failData.length) {
-              let flag = await dbNotExists(pool, config.table.uptime, failData);
-              if (flag) {
-                await dbInsert(pool, config.table.uptime, [failData])
-                  .then(async (results) => {console.log(results);})
-                  .catch(console.log);
-              } else {
-                //console.log('the entry is exist');
-              }
-            }
-
+          if (response && response.statusCode !== 200) {
+            failData.push(now, uptimeProjects[p], 'fail');
           }
 
-        } // end request and write in DB
+          if (failData.length) {
+            let flag = await dbNotExists(pool, config.table.uptime, failData);
+            if (flag) {
+              await dbInsert(pool, config.table.uptime, [failData])
+              //  .then(async (results) => {console.log(results);})
+                .catch(console.log);
+            } else {
+              //console.log('the entry is exist');
+            }
+          }
 
-      } catch (e) {
-        reject(e.stack);
+        }
+
+      } // end request and write in DB
+
+      //---------------------------------------------------------------
+      // Get data from DB
+      //---------------------------------------------------------------
+
+      //- Clear result cells -----------------------------------------
+
+      let clearResult = [];
+
+      for (let k = 0; k < 200; k++) {
+        clearResult.push(['']);
+        for (let l = 0; l < 6; l++) {
+          clearResult[k].push('');
+        }
       }
 
+      range = list.main + '!B3:H';
 
-      // //---------------------------------------------------------------
-      // // Get data from DB
-      // //---------------------------------------------------------------
-      //
-      // //- Clear result cells -----------------------------------------
-      //
-      // let clearResult1 = [];
-      // let clearResult2 = [];
-      // let range1 = '';
-      // let range2 = '';
-      //
-      // for (let i = 0; i < 1000; i++) {
-      //   clearResult1.push(['']);
-      // }
-      //
-      // for (let k = 0; k < 1000; k++) {
-      //   clearResult2.push(['']);
-      //   for (let l = 0; l < 30; l++) {
-      //     clearResult2[k].push('');
-      //   }
-      // }
-      //
-      // range1 = list.position + '!F4:F';
-      // range2 = list.position + '!J3:AN';
-      //
-      // await Promise.all([
-      //   crud.update(clearResult1, config.sid.positionProfi, range1),
-      //   crud.update(clearResult2, config.sid.positionProfi, range2)
-      // ])
-      //   .then(async results => {console.log(results);})
-      //   .catch(console.log);
-      //
-      // //---------------------------------------------------------------
-      //
-      // range = list.position + config.range.date.position;
-      // let dateSample = await crud.read(config.sid.positionProfi, range);
-      //
-      // for (let project in positionParam) {
-      //   if (positionParam.hasOwnProperty(project)) {
-      //
-      //     let site = project;
-      //     let start = positionParam[project].start;
-      //     let region = positionParam[project].region;
-      //     let keywords = positionParam[project].keywords.map(keyword => {
-      //       return decodeURIComponent(keyword);
-      //     });
-      //
-      //     let params = [dateSample[0], site, keywords];
-      //
-      //     let positionData = await positionQuery(pool, config.table.position, params);
-      //     let positionDataCommon = [];
-      //
-      //     //console.log(require('util').inspect(positionData, { depth: null }));
-      //
-      //     let url = positionData[0];
-      //
-      //     url = url.map(line => {
-      //       return [line[0]];
-      //     });
-      //
-      //     range = list.position + '!F' + (start + 1) + ':F';
-      //
-      //     await crud.update(url, config.sid.positionProfi, range)
-      //       .then(async results => {console.log(results);})
-      //       .catch(console.log);
-      //
-      //     positionData.forEach(dataDay => {
-      //
-      //       let tempData = [];
-      //       let top10 = 0;
-      //       let topKeys = 0;
-      //
-      //       dataDay.forEach(data => {
-      //         if(Number(data[1]) && Number(data[1]) < 11) {
-      //           topKeys++;
-      //         }
-      //       });
-      //
-      //       top10 = topKeys / dataDay.length * 100;
-      //       top10 = Math.round(top10 * 100) / 100;
-      //       tempData.push([top10]);
-      //
-      //       dataDay.forEach(data =>  {
-      //         tempData.push([data.pop()]);
-      //       });
-      //
-      //       if (!positionDataCommon.length) {
-      //         positionDataCommon = tempData;
-      //       } else {
-      //         for (var i = 0; i < tempData.length; i++) {
-      //           positionDataCommon[i].push(tempData[i][0]);
-      //         }
-      //       }
-      //
-      //     });
-      //
-      //     range = list.position + '!J' + start + ':AN';
-      //
-      //     await crud.update(positionDataCommon, config.sid.positionProfi, range)
-      //       .then(async results => {console.log(results);})
-      //       .catch(console.log);
-      //   }
-      // }
+      await crud.update(clearResult, config.sid.uptime, range)
+      //  .then(async results => {console.log(results);})
+        .catch(console.log);
+
+      //---------------------------------------------------------------
+
+      let params = [uptimeDate, uptimeProjects, 'fail'];
+      let uptimeData = await uptimeQuery(pool, config.table.uptime, params);
+
+      await crud.update(uptimeData, config.sid.uptime, range)
+      //  .then(async results => {console.log(results);})
+        .catch(console.log);
 
     } // = End start function =
 
