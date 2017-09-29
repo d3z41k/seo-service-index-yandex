@@ -33,9 +33,9 @@ router
   .get('/uptime-monitoring', async ctx => {
     const direction = ctx.params.direction;
     const uptimeMonitoring = require('./ss-scripts/uptime-monitoring');
-    ctx.body = await uptimeMonitoring();
+    ctx.body = await uptimeMonitoring(false);
   })
-  .get('/uptime-monitoring/update', async ctx => {
+  .get('/uptime-monitoring/profi', async ctx => {
     const direction = ctx.params.direction;
     const uptimeMonitoring = require('./ss-scripts/uptime-monitoring');
     ctx.body = await uptimeMonitoring(true);

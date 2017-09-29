@@ -110,7 +110,7 @@ router
     });
 
     for (let i = 0; i < resultSite.length; i++) {
-      if (resultSite[i]['domain'] == params.site) {
+      if ((resultSite[i]['domain'] == params.site) || (resultSite[i]['domain'] == 'www.' + params.site)) {
         position = i + 1;
         url = resultSite[i]['url'];
         break;

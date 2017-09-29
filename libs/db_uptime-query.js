@@ -12,14 +12,12 @@ async function uploadQuery(pool, tableName, params) {
           await pool.execute('SELECT `status` FROM '+ tableName +' WHERE ' +
               '`date` = ? ' +
               'AND `site` = ? ' +
-              'AND `status` = ? ' +
               'LIMIT 1', [
                 params[0][d],
                 params[1][p],
-                params[2]
               ])
             .then(([col, feilds]) => {
-              result[p].push(col[0] ? col[0]['status'] : 'ok');
+              result[p].push(col[0] ? col[0]['status'] : null);
             })
             .catch(err => {
               console.log(err)

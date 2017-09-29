@@ -127,6 +127,7 @@ async function positionSingle(sheet) {
           }
           if (data[0]) {
             data[0] = data[0].replace(/http:\/\//g, '');
+            data[0] = data[0].replace(/https:\/\//g, '');
             data[0] = data[0].replace(/www./g, '');
             data[0] = data[0].replace(site, '');
           }

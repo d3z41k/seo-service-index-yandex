@@ -145,11 +145,11 @@ async function positionMonitoring(flag, direction) {
       let range1 = '';
       let range2 = '';
 
-      for (let i = 0; i < 1000; i++) {
+      for (let i = 0; i < 3000; i++) {
         clearResult1.push(['']);
       }
 
-      for (let k = 0; k < 1000; k++) {
+      for (let k = 0; k < 3000; k++) {
         clearResult2.push(['']);
         for (let l = 0; l < 30; l++) {
           clearResult2[k].push('');
@@ -173,6 +173,8 @@ async function positionMonitoring(flag, direction) {
 
       for (let project in positionParam) {
         if (positionParam.hasOwnProperty(project)) {
+
+          //console.log(project);
 
           let site = project;
           let start = positionParam[project].start;
@@ -233,7 +235,7 @@ async function positionMonitoring(flag, direction) {
           range = list.position + '!J' + start + ':AN';
 
           await crud.update(positionDataCommon, config.sid.positionProfi, range)
-            .then(async results => {console.log(results);})
+          //  .then(async results => {console.log(results);})
             .catch(console.log);
         }
       }
