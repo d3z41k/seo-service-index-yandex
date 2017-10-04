@@ -77,8 +77,12 @@ async function indexSite(flag) {
 
           //= Processing the seo ptoject =
 
-          let seoProjectsProc = seoProjects.map(project => {
-            return project[0].replace(/http:\/\//g, '');
+          let seoProjectsProc = [];
+
+          seoProjects.forEach(project => {
+            project[0] = project[0].replace(/http:\/\//g, '');
+            project[0] = project[0].replace(/https:\/\//g, '');
+            seoProjectsProc.push(project[0]);
           });
 
           seoProjectsProc.forEach((project, p) => {
