@@ -140,6 +140,7 @@ async function uptimeMonitoring(profi) {
         //---------------------------------------------------------------
 
         let params = [uptimeDate, uptimeProjects];
+
         let uptimeData = await uptimeQuery(pool, config.table.uptime, params);
 
         await crud.update(uptimeData, config.sid.uptime, range)
