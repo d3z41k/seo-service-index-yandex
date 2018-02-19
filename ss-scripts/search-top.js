@@ -92,7 +92,7 @@ async function searchTop(sheet) {
 
             top10DataArr.push(response.body.split(','));
             await sleep(1500);
-            
+
             //console.log('get top-10 ' + i);
           }
 
