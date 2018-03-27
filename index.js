@@ -15,6 +15,14 @@ router
     const indexSite = require('./ss-scripts/index-site');
     ctx.body = await indexSite(true);
   })
+  .get('/index-profi-site', async ctx => {
+    const indexSite = require('./ss-scripts/index-profi-site');
+    ctx.body = await indexSite(false);
+  })
+  .get('/index-profi-site/update', async ctx => {
+    const indexSite = require('./ss-scripts/index-profi-site');
+    ctx.body = await indexSite(true);
+  })
   .get('/position-single/:sheet', async ctx => {
     const sheet = ctx.params.sheet;
     const positionSingle = require('./ss-scripts/position-single');
